@@ -37,6 +37,16 @@ function parseBalance(balance: string | null): number {
   return parseFloat(numericPart) || 0;
 }
 
+function computePresetStake(balanceStr: string | null | undefined, percentage: number): string {
+  const available = parseBalance(balanceStr ?? null);
+  if (available <= 0) return '';
+  const raw = available * percentage;
+  const factor = 10000;
+  const truncated = Math.floor(raw * factor + 1e-9) / factor;
+  const safeAmount = Math.min(truncated, available);
+  return Number(safeAmount.toFixed(4)).toString();
+}
+
 function validateStake(value: string, walletBalance: string | null): string | null {
   if (!value.trim()) return 'Enter a stake amount';
   const amount = Number(value);
@@ -208,6 +218,14 @@ export default function BetModal({ isOpen, onClose, predictionData, onSuccess, o
     } finally {
       setIsConnecting(false);
     }
+  };
+
+  const availableBalance = parseBalance(balance);
+  const arePresetsDisabled = !isConnected || availableBalance <= 0 || tx.isInFlight;
+
+  const handlePresetClick = (percentage: number) => {
+    const calculatedStake = computePresetStake(balance, percentage);
+    handleStakeChange(calculatedStake);
   };
 
   const handleStakeChange = (value: string) => {
@@ -524,7 +542,38 @@ export default function BetModal({ isOpen, onClose, predictionData, onSuccess, o
               )}
 
               <div className="border-t border-gray-800 pt-3">
-                <label htmlFor="bet-modal-stake" className="mb-2 block text-sm text-gray-400">Stake</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label htmlFor="bet-modal-stake" className="text-sm text-gray-400">Stake</label>
+                  <div className="flex items-center gap-1" role="group" aria-label="Stake presets">
+                    <button
+                      type="button"
+                      onClick={() => handlePresetClick(0.25)}
+                      disabled={arePresetsDisabled}
+                      className="rounded bg-gray-800 px-2 py-0.5 text-xs font-semibold text-gray-300 hover:bg-gray-700 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition"
+                      aria-label="Set stake to 25% of balance"
+                    >
+                      25%
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePresetClick(0.5)}
+                      disabled={arePresetsDisabled}
+                      className="rounded bg-gray-800 px-2 py-0.5 text-xs font-semibold text-gray-300 hover:bg-gray-700 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition"
+                      aria-label="Set stake to 50% of balance"
+                    >
+                      50%
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePresetClick(1.0)}
+                      disabled={arePresetsDisabled}
+                      className="rounded bg-gray-800 px-2 py-0.5 text-xs font-semibold text-gray-300 hover:bg-gray-700 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition"
+                      aria-label="Set stake to Max available balance"
+                    >
+                      Max
+                    </button>
+                  </div>
+                </div>
                 <div className="flex items-center gap-2">
                   <input
                     id="bet-modal-stake"
