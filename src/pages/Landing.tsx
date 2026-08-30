@@ -136,11 +136,11 @@ export default function Landing() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 sm:flex-row">
           <div className="text-center sm:text-left">
             <p className="text-lg font-bold text-white">Xelma</p>
-            <p className="mt-1 text-sm text-[#808897]">
+            <p className="mt-1 text-sm text-gray-400">
               {t('footer.description')}
             </p>
           </div>
-          <div className="flex items-center gap-6 text-sm text-[#808897]">
+          <div className="flex items-center gap-6 text-sm text-gray-400">
             <span>MIT License</span>
             <a
               href="https://github.com/TevaLabs/Xelma-Frontend"
