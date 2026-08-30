@@ -1,10 +1,34 @@
 import { test, expect } from '@playwright/test';
 
+const MOCK_ADDRESS = 'GBHExampleAddressForTestingPurposesOnly1234567890ABCDE';
+
+function mockFreighter(page: import('@playwright/test').Page) {
+  return page.addInitScript((mockAddress: string) => {
+    let connected = false;
+    (window as unknown as Record<string, unknown>).freighter = {
+      isConnected: () => Promise.resolve({ isConnected: connected }),
+      requestAccess: () => {
+        connected = true;
+        return Promise.resolve({ address: mockAddress, error: null });
+      },
+      getAddress: () =>
+        Promise.resolve({ address: connected ? mockAddress : '', error: null }),
+      getNetwork: () => Promise.resolve({ network: 'TESTNET', error: null }),
+      signMessage: (message: string) =>
+        Promise.resolve({ signedMessage: `mocked_signature_${message}`, error: null }),
+    };
+  }, MOCK_ADDRESS);
+}
+
 test.describe('Smoke Tests - Critical Routes', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.setItem('xelma_onboarding_dismissed', 'true');
+      window.localStorage.clear();
     });
+    // Immediately fulfill active round fetch so isLoading transitions to false without network delay
+    await page.route('**/api/rounds/active', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }),
+    );
   });
 
   test('Landing page loads and renders correctly', async ({ page }) => {
@@ -28,6 +52,7 @@ test.describe('Smoke Tests - Critical Routes', () => {
   });
 
   test('Dashboard page loads and renders correctly', async ({ page }) => {
+    await mockFreighter(page);
     await page.goto('/dashboard');
 
     // Verify page title

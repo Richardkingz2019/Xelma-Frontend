@@ -73,6 +73,7 @@ const mockRoundStore = {
 const mockWalletStore = {
   status: 'connected' as const,
   publicKey: 'GTEST123',
+  connect: vi.fn(),
 };
 
 // Mock the stores with proper Zustand-like behavior
@@ -267,6 +268,7 @@ describe('Dashboard', () => {
     Object.assign(mockWalletStore, {
       status: 'connected',
       publicKey: 'GTEST123',
+      connect: vi.fn(),
     });
 
     localStorage.clear();
@@ -326,6 +328,44 @@ describe('Dashboard', () => {
 
       expect(screen.getByTestId('share-rounds-btn')).toBeInTheDocument();
       expect(screen.getByText('Share')).toBeInTheDocument();
+    });
+  });
+
+  describe('mode toggle & persistence', () => {
+    it('renders mode toggle on the dashboard header', () => {
+      render(<Dashboard />);
+
+      const toggle = screen.getByTestId('dashboard-mode-toggle');
+      expect(toggle).toBeInTheDocument();
+      expect(screen.getByTestId('mode-practice-btn')).toHaveAttribute('aria-checked', 'true');
+      expect(screen.getByTestId('practice-risk-free-label')).toHaveTextContent(
+        'virtual xLM, no on-chain risk'
+      );
+    });
+
+    it('persists selected mode in localStorage when switched', () => {
+      render(<Dashboard />);
+
+      const onChainBtn = screen.getByTestId('mode-onchain-btn');
+      fireEvent.click(onChainBtn);
+
+      expect(localStorage.getItem('xelma_mode')).toBe('on-chain');
+      expect(onChainBtn).toHaveAttribute('aria-checked', 'true');
+    });
+
+    it('prompts wallet connection and remains in practice mode when clicking on-chain while disconnected', () => {
+      vi.mocked(useWalletStore).mockImplementation(((selector: unknown) => {
+        const store = { ...mockWalletStore, status: 'idle', publicKey: null };
+        return selectFromStore(selector, store);
+      }) as never);
+
+      render(<Dashboard />);
+
+      const onChainBtn = screen.getByTestId('mode-onchain-btn');
+      fireEvent.click(onChainBtn);
+
+      expect(mockWalletStore.connect).toHaveBeenCalledTimes(1);
+      expect(screen.getByTestId('mode-practice-btn')).toHaveAttribute('aria-checked', 'true');
     });
   });
 
