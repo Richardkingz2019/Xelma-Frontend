@@ -47,6 +47,21 @@ import type { RecentActivityItem } from "../types";
 import { toast } from "sonner";
 import { Share2 } from "lucide-react";
 
+/**
+ * Issue #413 — derive the UP/DOWN pool split (0-100) for a round so the
+ * BetModal can surface the soft pool-imbalance warning. Returns null for
+ * precision rounds or empty pools.
+ */
+function upDownPoolPercentages(
+  round: { mode?: string; poolUp?: number; poolDown?: number } | null,
+): { poolUpPct: number; poolDownPct: number } | null {
+  if (!round || round.mode !== 'updown') return null;
+  const total = (round.poolUp ?? 0) + (round.poolDown ?? 0);
+  if (total <= 0) return null;
+  const upPct = Math.round(((round.poolUp ?? 0) / total) * 100);
+  return { poolUpPct: upPct, poolDownPct: 100 - upPct };
+}
+
 function mapPredictionToActivityItem(pred: UserPrediction): RecentActivityItem {
   const isWin = typeof pred.isWin === "boolean"
     ? pred.isWin
@@ -237,6 +252,17 @@ const Dashboard = () => {
     [normalizedAsset],
   );
 
+  // Issue #413 — pool split for the selected asset's UP/DOWN round, attached
+  // to predictions opened from the prediction card / mobile bar so the
+  // BetModal can surface the soft pool-imbalance warning.
+  const assetPoolSplit = useMemo(
+    () =>
+      upDownPoolPercentages(
+        mockRounds.find((r) => r.asset === normalizedAsset && r.mode === 'updown') ?? null,
+      ),
+    [normalizedAsset],
+  );
+
   // Scroll the deep-linked RoundCard into view once it's actually rendered
   // (it may be filtered out by the selected asset tab, so we only scroll
   // when it resolves to a visible card).
@@ -363,7 +389,9 @@ const Dashboard = () => {
   }, []);
 
   const handlePrediction = (data: PredictionData) => {
-    setPendingPrediction(data);
+    // Attach the round's UP/DOWN pool split so the BetModal can surface the
+    // soft pool-imbalance warning for UP/DOWN rounds.
+    setPendingPrediction({ ...data, ...(assetPoolSplit ?? {}) });
     setIsBetModalOpen(true);
   };
 
@@ -526,11 +554,14 @@ const Dashboard = () => {
                     }}
                     round={round}
                     isHighlighted={deepLinkedRoundId === round.id}
-                    onSubmitPrediction={() => {
+                    onSubmitPrediction={(round) => {
                       setPendingPrediction({
                         direction: "UP",
                         stake: "0",
                         isLegend: false,
+                        // Issue #413 — carry the round's UP/DOWN pool split so
+                        // the BetModal can show the imbalance warning.
+                        ...(upDownPoolPercentages(round) ?? {}),
                       });
                       setIsBetModalOpen(true);
                     }}
@@ -669,6 +700,7 @@ const Dashboard = () => {
                 direction: 'UP',
                 stake: '',
                 isLegend: false,
+                ...(assetPoolSplit ?? {}),
               });
               setIsBetModalOpen(true);
             }}

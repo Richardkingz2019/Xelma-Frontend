@@ -30,6 +30,10 @@ export interface PredictionData {
   stake: string;
   exactPrice?: string;
   isLegend: boolean;
+  /** Share of the UP/DOWN pool held by each side (0-100). Present only for
+   *  UP/DOWN rounds; lets the BetModal surface the pool-imbalance warning. */
+  poolUpPct?: number;
+  poolDownPct?: number;
 }
 
 export interface PredictionControlsProps {
