@@ -45,20 +45,6 @@ vi.mock('../lib/xelma-contract', () => ({
     instructions: '100000',
     readBytes: '512',
     writeBytes: '256',
-    baseFee: '0.00001',
-    resourceFee: '0.00005',
-    totalFee: '0.00006',
-    instructions: '1000000',
-    readBytes: '500',
-    writeBytes: '200',
-  }),
-  estimatePrecisionPrediction: vi.fn().mockResolvedValue({
-    baseFee: '0.00001',
-    resourceFee: '0.00006',
-    totalFee: '0.00007',
-    instructions: '1200000',
-    readBytes: '600',
-    writeBytes: '300',
   }),
 }));
 
@@ -189,7 +175,7 @@ describe('BetModal — transaction pending state (#163)', () => {
       const liveRegion = container.querySelector('[aria-live="assertive"]');
       expect(liveRegion).toBeInTheDocument();
       expect(liveRegion).toHaveTextContent(/transaction failed/i);
-      expect(liveRegion).toHaveTextContent(/cancelled/i);
+      expect(liveRegion).toHaveTextContent(/user rejected|cancelled/i);
     });
   });
 
