@@ -22,9 +22,9 @@ function mockFreighter(page: import('@playwright/test').Page) {
 
 test.describe('Smoke Tests - Critical Routes', () => {
   test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => {
-      window.localStorage.clear();
-    });
+    page.on('console', (msg) => console.log('PAGE LOG:', msg.text()));
+    page.on('pageerror', (err) => console.log('PAGE ERROR:', err.message, err.stack));
+
     // Immediately fulfill active round fetch so isLoading transitions to false without network delay
     await page.route('**/api/rounds/active', (route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: 'null' }),
@@ -33,6 +33,7 @@ test.describe('Smoke Tests - Critical Routes', () => {
 
   test('Landing page loads and renders correctly', async ({ page }) => {
     await page.goto('/');
+    await page.waitForLoadState('networkidle');
 
     // Verify page title
     await expect(page).toHaveTitle(/Xelma/i);
@@ -54,6 +55,7 @@ test.describe('Smoke Tests - Critical Routes', () => {
   test('Dashboard page loads and renders correctly', async ({ page }) => {
     await mockFreighter(page);
     await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
 
     // Verify page title
     await expect(page).toHaveTitle(/Xelma/i);
@@ -71,6 +73,7 @@ test.describe('Smoke Tests - Critical Routes', () => {
 
   test('Leaderboard page loads and renders correctly', async ({ page }) => {
     await page.goto('/leaderboard');
+    await page.waitForLoadState('networkidle');
 
     // Verify page title
     await expect(page).toHaveTitle(/Xelma/i);

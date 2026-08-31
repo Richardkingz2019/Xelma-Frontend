@@ -1,18 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
-import { useNavigation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 
 const START_PCT = 15;
-const TRICKLE_MS = 150;
-const COMPLETE_DELAY_MS = 350;
 const FADE_MS = 200;
 
 export default function RouteProgressBar() {
-  const navigation = useNavigation();
+  const location = useLocation();
   const [progress, setProgress] = useState(0);
   const [visible, setVisible] = useState(false);
-
-  const prefersReducedMotion = useRef(
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const [isReducedMotion, setIsReducedMotion] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
 
   // Keep reduced-motion preference in sync if the OS setting changes.
@@ -20,7 +17,7 @@ export default function RouteProgressBar() {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
 
     const onChange = () => {
-      prefersReducedMotion.current = mq.matches;
+      setIsReducedMotion(mq.matches);
 
       // Immediately hide an active progress bar if the preference changes.
       if (mq.matches) {
@@ -35,45 +32,30 @@ export default function RouteProgressBar() {
   }, []);
 
   useEffect(() => {
-    if (prefersReducedMotion.current) {
+    if (isReducedMotion) {
       return;
     }
 
-    const isNavigating = navigation.state !== 'idle';
-
-    if (!isNavigating) {
-      if (!visible) return;
-
-      setProgress(100);
-
-      const fade = window.setTimeout(() => {
-        setVisible(false);
-        setProgress(0);
-      }, FADE_MS);
-
-      return () => window.clearTimeout(fade);
-    }
-
-    // Navigation started.
+    // Trigger progress bar when route changes
     setVisible(true);
-    setProgress((current) =>
-      current > START_PCT ? current : START_PCT
-    );
+    setProgress(START_PCT);
 
-    const trickle = window.setInterval(() => {
-      setProgress((current) =>
-        current < 90
-          ? Math.min(90, current + Math.random() * 10)
-          : current
-      );
-    }, TRICKLE_MS);
+    const completeTimer = setTimeout(() => {
+      setProgress(100);
+    }, 100);
+
+    const fadeTimer = setTimeout(() => {
+      setVisible(false);
+      setProgress(0);
+    }, 100 + FADE_MS);
 
     return () => {
-      window.clearInterval(trickle);
+      clearTimeout(completeTimer);
+      clearTimeout(fadeTimer);
     };
-  }, [navigation.state, visible]);
+  }, [location.pathname, location.search, isReducedMotion]);
 
-  if (prefersReducedMotion.current || !visible) {
+  if (isReducedMotion || !visible) {
     return null;
   }
 

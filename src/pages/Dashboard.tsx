@@ -39,6 +39,7 @@ import FriendbotFundCard from '../components/FriendbotFundCard';
 import NetworkMismatchCard from '../components/NetworkMismatchCard';
 import ProfileSummaryCard from '../components/ProfileSummaryCard';
 import { useReducedMotion } from '../hooks/useReducedMotion';
+import ModeToggle, { type DashboardMode } from "../components/ModeToggle";
 
 import { inspectSorobanState, type SorobanInspectorSnapshot } from "../lib/xelma-contract";
 import { mockRounds } from "../data/mockData";
@@ -172,10 +173,23 @@ const activeRoundId = useRoundStore((state) => state.activeRound?.id ?? null);
   const [isBetModalOpen, setIsBetModalOpen] = useState(false);
   const [pendingPrediction, setPendingPrediction] = useState<PredictionData | null>(null);
   const [optimisticPrediction, setOptimisticPrediction] = useState<UserPrediction | null>(null);
+  // Bumped on a successful submit so PredictionHistory re-fetches and picks
+  // up the now-confirmed prediction once the optimistic row is cleared.
+  const [historyRefreshSignal, setHistoryRefreshSignal] = useState(0);
   // Community chat is opt-in so the default terminal stays uncluttered.
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isEventLogOpen, setIsEventLogOpen] = useState(false);
   const timeoutRef = useRef<number | null>(null);
+
+  const [dashboardMode, setDashboardMode] = useState<DashboardMode>(() => {
+    const saved = localStorage.getItem('xelma_mode');
+    return saved === 'on-chain' ? 'on-chain' : 'practice';
+  });
+
+  const handleModeChange = (newMode: DashboardMode) => {
+    setDashboardMode(newMode);
+    localStorage.setItem('xelma_mode', newMode);
+  };
 
   // Latest live price from the chart, held in a ref to avoid re-renders on every tick.
   const currentPriceRef = useRef<number | null>(null);
@@ -426,7 +440,13 @@ const activeRoundId = useRoundStore((state) => state.activeRound?.id ?? null);
         {isLoading && <DashboardSkeleton />}
 
         {!isLoading && (
-          <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <ModeToggle
+              mode={dashboardMode}
+              onChangeMode={handleModeChange}
+              isWalletConnected={isWalletConnected}
+              onPromptConnect={() => void useWalletStore.getState().connect()}
+            />
             <button
               type="button"
               onClick={() => setIsChatOpen((open) => !open)}
@@ -658,7 +678,11 @@ const activeRoundId = useRoundStore((state) => state.activeRound?.id ?? null);
                   onRetry={fetchActivities}
                 />
               )}
-              <PredictionHistory userId={publicKey} optimisticPrediction={optimisticPrediction} />
+              <PredictionHistory
+                userId={publicKey}
+                optimisticPrediction={optimisticPrediction}
+                refreshSignal={historyRefreshSignal}
+              />
             </div>
           </div>
         )}
@@ -708,6 +732,7 @@ setOptimisticPrediction(null);
           }
           void fetchStats();
           void fetchActivities();
+          setHistoryRefreshSignal((n) => n + 1);
         }}
       />
       <EndRoundModal
