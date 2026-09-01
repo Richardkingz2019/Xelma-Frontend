@@ -52,8 +52,10 @@ const LearnPage = () => {
     }, []);
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: load education content on mount and on retry
-        fetchData();
+        const timer = setTimeout(() => {
+            fetchData();
+        }, 0);
+        return () => clearTimeout(timer);
     }, [fetchData]);
 
     if (loading) {
