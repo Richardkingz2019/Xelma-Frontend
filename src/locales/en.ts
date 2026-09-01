@@ -93,6 +93,14 @@ const en = {
       ETH: 'Ethereum',
       XLM: 'Stellar',
     },
+    modeToggle: {
+      label: 'Trading mode',
+      practice: 'Practice',
+      practiceSubtitle: 'virtual xLM, no on-chain risk',
+      onChain: 'On-Chain',
+      onChainSubtitle: 'Live Stellar smart contracts',
+      connectRequired: 'Connect wallet to switch to On-Chain mode',
+    },
   },
   tournament: {
     title: 'Tournaments',

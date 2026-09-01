@@ -1,7 +1,30 @@
 import { test, expect } from '@playwright/test';
 
+const MOCK_ADDRESS = 'GBHExampleAddressForTestingPurposesOnly1234567890ABCDE';
+
+function mockFreighter(page: import('@playwright/test').Page) {
+  return page.addInitScript((mockAddress: string) => {
+    let connected = false;
+    (window as unknown as Record<string, unknown>).freighter = {
+      isConnected: () => Promise.resolve({ isConnected: connected }),
+      requestAccess: () => {
+        connected = true;
+        return Promise.resolve({ address: mockAddress, error: null });
+      },
+      getAddress: () =>
+        Promise.resolve({ address: connected ? mockAddress : '', error: null }),
+      getNetwork: () => Promise.resolve({ network: 'TESTNET', error: null }),
+      signMessage: (message: string) =>
+        Promise.resolve({ signedMessage: `mocked_signature_${message}`, error: null }),
+    };
+  }, MOCK_ADDRESS);
+}
+
 test.describe('Smoke Tests - Critical Routes', () => {
   test.beforeEach(async ({ page }) => {
+    page.on('console', (msg) => console.log('PAGE LOG:', msg.text()));
+    page.on('pageerror', (err) => console.log('PAGE ERROR:', err.message, err.stack));
+
     await page.addInitScript(() => {
       window.localStorage.setItem('xelma_onboarding_dismissed', 'true');
       let connected = false;
@@ -46,6 +69,7 @@ test.describe('Smoke Tests - Critical Routes', () => {
   });
   test('Landing page loads and renders correctly', async ({ page }) => {
     await page.goto('/');
+    await page.waitForLoadState('networkidle');
 
     // Verify page title
     await expect(page).toHaveTitle(/Xelma/i);
@@ -65,7 +89,9 @@ test.describe('Smoke Tests - Critical Routes', () => {
   });
 
   test('Dashboard page loads and renders correctly', async ({ page }) => {
+    await mockFreighter(page);
     await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
 
     // Close any modal overlay that might be present (e.g., onboarding checklist)
     const modalOverlay = page.locator('.fixed.inset-0');
@@ -89,6 +115,7 @@ test.describe('Smoke Tests - Critical Routes', () => {
 
   test('Leaderboard page loads and renders correctly', async ({ page }) => {
     await page.goto('/leaderboard');
+    await page.waitForLoadState('networkidle');
 
     // Verify page title
     await expect(page).toHaveTitle(/Xelma/i);

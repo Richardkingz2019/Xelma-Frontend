@@ -10,6 +10,7 @@ import AssetTabs from "../components/AssetTabs";
 import { ASSETS } from "../constants/assets";
 import type { Asset } from "../types/asset";
 
+import { useTranslation } from 'react-i18next';
 import type { PredictionData } from "../components/PredictionControls";
 import BetModal from "../components/BetModal";
 import EndRoundModal from "../components/EndRoundModal";
@@ -39,6 +40,7 @@ import NetworkMismatchCard from '../components/NetworkMismatchCard';
 import ProfileSummaryCard from '../components/ProfileSummaryCard';
 import SorobanInspectorPanel from '../components/SorobanInspectorPanel';
 import { useReducedMotion } from '../hooks/useReducedMotion';
+import ModeToggle, { type DashboardMode } from "../components/ModeToggle";
 
 import { inspectSorobanState, type SorobanInspectorSnapshot } from "../lib/xelma-contract";
 import { mockRounds } from "../data/mockData";
@@ -170,6 +172,7 @@ const DailyTip = () => {
 
 
 const Dashboard = () => {
+  const { t } = useTranslation();
   const isRoundActive = useRoundStore((state) => state.isRoundActive);
   const isLoading = useRoundStore((state) => state.isLoading);
   const sseConnection = useRoundStore((state) => state.sseConnection);
@@ -193,6 +196,16 @@ const Dashboard = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isEventLogOpen, setIsEventLogOpen] = useState(false);
   const timeoutRef = useRef<number | null>(null);
+
+  const [dashboardMode, setDashboardMode] = useState<DashboardMode>(() => {
+    const saved = localStorage.getItem('xelma_mode');
+    return saved === 'on-chain' ? 'on-chain' : 'practice';
+  });
+
+  const handleModeChange = (newMode: DashboardMode) => {
+    setDashboardMode(newMode);
+    localStorage.setItem('xelma_mode', newMode);
+  };
 
   // Latest live price from the chart, held in a ref to avoid re-renders on every tick.
   const currentPriceRef = useRef<number | null>(null);
@@ -464,7 +477,13 @@ const Dashboard = () => {
         {isLoading && <DashboardSkeleton />}
 
         {!isLoading && (
-          <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <ModeToggle
+              mode={dashboardMode}
+              onChangeMode={handleModeChange}
+              isWalletConnected={isWalletConnected}
+              onPromptConnect={() => void useWalletStore.getState().connect()}
+            />
             <button
               type="button"
               onClick={() => setIsChatOpen((open) => !open)}
@@ -541,7 +560,7 @@ const Dashboard = () => {
                     aria-label="Copy share link"
                   >
                     <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
-                    Share
+                    {t('dashboard.share.button')}
                   </button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -595,14 +614,14 @@ const Dashboard = () => {
         {!isLoading && !isWalletConnected && (
           <div className="mb-6 flex flex-col gap-3 rounded-xl border border-[#2C4BFD]/30 bg-[#2C4BFD]/10 p-4 text-sm text-[#BEC7FE] sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 sm:py-4">
             <p className="leading-relaxed" data-testid="dashboard-wallet-prompt">
-              Connect your wallet to submit predictions.
+              {t('dashboard.walletPrompt.message')}
             </p>
             <Link
               to="/connect"
               data-testid="dashboard-connect-now"
               className="btn-primary no-underline inline-flex min-h-[44px] w-full items-center justify-center rounded-lg px-5 py-2 text-sm font-bold sm:w-auto"
             >
-              Connect now
+              {t('dashboard.walletPrompt.connectNow')}
             </Link>
           </div>
         )}
@@ -613,8 +632,8 @@ const Dashboard = () => {
 
         {!isLoading && !isRoundActive && (
           <EmptyState
-            title="No Active Rounds"
-            description="Learn how the game works or refresh to check for new rounds."
+            title={t('dashboard.emptyState.noActiveRounds.title')}
+            description={t('dashboard.emptyState.noActiveRounds.description')}
             icon={<NoRoundsIllustration className="mb-4" />}
             action={
               <button
