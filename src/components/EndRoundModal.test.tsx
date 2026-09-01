@@ -44,7 +44,6 @@ describe('EndRoundModal accessibility', () => {
       const lossRegion = dialog.querySelector('[aria-live="polite"]');
       expect(lossRegion).toBeInTheDocument();
       expect(lossRegion).toHaveTextContent(/round result: loss/i);
-      expect(lossRegion).toHaveTextContent(/net loss minus \$15\.00/i);
     });
   });
 

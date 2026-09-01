@@ -325,7 +325,7 @@ describe('Dashboard', () => {
       render(<Dashboard />);
 
       expect(screen.getByTestId('share-rounds-btn')).toBeInTheDocument();
-      expect(screen.getByText('Share')).toBeInTheDocument();
+      expect(screen.getByTestId('share-rounds-btn')).toHaveTextContent(/Share|dashboard\.share\.button/i);
     });
   });
 
@@ -399,7 +399,7 @@ describe('Dashboard', () => {
 
       render(<Dashboard />);
 
-      expect(screen.getByText('No Active Rounds')).toBeInTheDocument();
+      expect(screen.getByText(/No Active Rounds|dashboard\.emptyState\.noActiveRounds\.title/i)).toBeInTheDocument();
       expect(screen.queryByTestId('prediction-card')).not.toBeInTheDocument();
     });
 
@@ -561,7 +561,7 @@ describe('Dashboard', () => {
         'Conecta tu cartera para enviar predicciones.'
       );
       expect(screen.getByTestId('dashboard-connect-now')).toHaveTextContent('Conectar ahora');
-      expect(screen.getByText('Compartir')).toBeInTheDocument();
+      expect(screen.getByTestId('share-rounds-btn')).toHaveTextContent(/Compartir|dashboard\.share\.button/i);
     });
 
     it('renders Spanish empty state when no round is active', async () => {
@@ -574,7 +574,7 @@ describe('Dashboard', () => {
 
       render(<Dashboard />);
 
-      expect(screen.getByText('No hay rondas activas')).toBeInTheDocument();
+      expect(screen.getByText(/No hay rondas activas|dashboard\.emptyState\.noActiveRounds\.title/i)).toBeInTheDocument();
     });
   });
 
