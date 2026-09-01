@@ -13,6 +13,10 @@ export interface PredictionData {
   stake: string;
   isLegend: boolean;
   exactPrice?: string;
+  /** Share of the UP/DOWN pool held by each side (0-100). Present only for
+   *  UP/DOWN rounds; used to surface the pool-imbalance soft warning. */
+  poolUpPct?: number;
+  poolDownPct?: number;
 }
 
 interface BetModalProps {
@@ -30,6 +34,11 @@ type PredictionMode = 'direction' | 'precision';
 const PRICE_MIN = 0.0001;
 const PRICE_MAX = 10;
 const PRICE_DECIMALS = 4;
+
+// Issue #413 — a side that holds this share (or more) of the UP/DOWN pool is
+// treated as "dominating". The warning is informational only and never blocks
+// the submit.
+const POOL_IMBALANCE_THRESHOLD_PCT = 70;
 
 function parseBalance(balance: string | null): number {
   if (!balance) return 0;
@@ -81,6 +90,9 @@ export default function BetModal({ isOpen, onClose, predictionData, onSuccess, o
   const [formError, setFormError] = useState('');
   const [inlineStakeError, setInlineStakeError] = useState('');
   const [outcomeAnnouncement, setOutcomeAnnouncement] = useState('');
+  // Issue #413 — the pool-imbalance warning is dismissible; re-shown whenever
+  // the modal is (re)opened or a new prediction is loaded.
+  const [poolWarningDismissed, setPoolWarningDismissed] = useState(false);
 
   // Fee estimate state
   const [feeEstimate, setFeeEstimate] = useState<FeeEstimate | null>(null);
@@ -162,6 +174,7 @@ export default function BetModal({ isOpen, onClose, predictionData, onSuccess, o
     setExactPrice(predictionData?.exactPrice ?? '');
     setFormError('');
     setInlineStakeError('');
+    setPoolWarningDismissed(false);
     setFeeEstimate(null);
     setFeeEstimateStatus('idle');
     setFeeEstimateError(null);
@@ -179,6 +192,7 @@ export default function BetModal({ isOpen, onClose, predictionData, onSuccess, o
       setExactPrice(predictionData?.exactPrice ?? '');
       setFormError('');
       setInlineStakeError('');
+      setPoolWarningDismissed(false);
       setFeeEstimate(null);
       setFeeEstimateStatus('idle');
       setFeeEstimateError(null);
@@ -322,6 +336,12 @@ export default function BetModal({ isOpen, onClose, predictionData, onSuccess, o
     return () => window.clearTimeout(timer);
   }, [tx.step, tx.errorMessage]);
 
+  // Issue #413 — pool-imbalance soft warning. Present only for UP/DOWN rounds
+  // (direction mode) when one side holds at least the imbalance threshold of
+  // the pool. Informational and dismissible; it never blocks the submit.
+  const poolUpPct = predictionData?.poolUpPct;
+  const poolDownPct = predictionData?.poolDownPct;
+
   const handleDirectionRef = useRef<(dir: 'UP' | 'DOWN') => void>(() => {});
   const handleConfirmRef = useRef<() => void>(() => {});
 
@@ -450,6 +470,40 @@ export default function BetModal({ isOpen, onClose, predictionData, onSuccess, o
                 </button>
               </div>
             )}
+
+            {/* Issue #413 — soft pool-imbalance warning (UP/DOWN rounds only).
+                Dismissible and informational; does not block the submit. */}
+            {poolUpPct !== undefined &&
+              poolDownPct !== undefined &&
+              mode === 'direction' &&
+              !poolWarningDismissed &&
+              (poolUpPct >= POOL_IMBALANCE_THRESHOLD_PCT ||
+                poolDownPct >= POOL_IMBALANCE_THRESHOLD_PCT) && (
+                <div
+                  className="mb-4 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3"
+                  role="status"
+                  data-testid="pool-imbalance-warning"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-amber-300">
+                      {poolUpPct >= poolDownPct ? 'UP' : 'DOWN'} dominates this round's pool
+                    </p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-gray-300">
+                      UP currently holds {poolUpPct}% of the pool and DOWN holds {poolDownPct}%.
+                      Betting with the majority can mean smaller payouts, while betting against
+                      it carries more risk. This won't block your prediction.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPoolWarningDismissed(true)}
+                    className="shrink-0 rounded-md p-1 text-gray-400 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                    aria-label="Dismiss pool imbalance warning"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
 
             <div className="mb-5 grid grid-cols-2 rounded-xl border border-gray-800 bg-gray-950/70 p-1" role="tablist" aria-label="Prediction input mode">
               <button
